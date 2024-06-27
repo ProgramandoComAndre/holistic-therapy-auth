@@ -10,6 +10,15 @@ class User {
         this.disabled = disabled
     }
 
+    static async getUserCount() {
+        const sql = 'SELECT COUNT(*) as "numberusers" FROM users'
+        const count = await pool.query(sql)
+        if(count.rows.length > 0) {
+            return count.rows[0].numberusers
+        }
+        return 0
+    }
+
     static async getUserById(id) {
         const sql = 'SELECT * FROM users INNER JOIN roles ON users.roleid = roles.id WHERE id = $1'
         const user = await pool.query(sql, [id])
@@ -21,7 +30,8 @@ class User {
 
     static async getUsers(queryParams) {
         let whereQuery = ""
-        if(queryParams){
+        let limitQuery = ""
+        if(Object.keys(queryParams).length > 0){
             if(queryParams.username) {
                 whereQuery = `WHERE username LIKE '%${queryParams.username}%'`
             }
@@ -30,7 +40,13 @@ class User {
             }
 
             if(queryParams.name) {
-                whereQuery = whereQuery ? `${whereQuery} AND name LIKE '%${queryParams.name}%'` : `WHERE name LIKE '%${queryParams.name}%'`
+                queryParams.name = queryParams.name.toLowerCase()
+                whereQuery = whereQuery ? `${whereQuery} AND name LIKE '%${queryParams.name}%'` : `WHERE LOWER(name) LIKE '%${queryParams.name}%'`
+            }
+
+            if(queryParams.page && queryParams.limit) {
+                const offset = (queryParams.page - 1) * queryParams.limit
+                limitQuery = `OFFSET ${offset} LIMIT ${queryParams.limit}`
             }
         
         }
@@ -38,7 +54,7 @@ class User {
 
    
 
-        const sql = `SELECT users.*, roles.description as "rolename" FROM users INNER JOIN roles ON users.roleid = roles.id ${whereQuery} AND users.disabled = false ORDER BY users.id`
+        const sql = `SELECT users.*, roles.description as "rolename" FROM users INNER JOIN roles ON users.roleid = roles.id ${whereQuery} AND users.disabled = false ORDER BY users.id ${limitQuery}`
         
         const users = await pool.query(sql)
         if(users.rows.length > 0) {

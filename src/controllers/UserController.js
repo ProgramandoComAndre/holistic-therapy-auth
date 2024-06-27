@@ -150,9 +150,21 @@ exports.enableUser = async (req, res) => {
 exports.listUsers = async (req, res) => {
     try {
     
-    const queryParams = Object.keys(req.query).length > 0 ? req.query : null
+    const queryParams = Object.keys(req.query).length > 0 ? req.query : {}
+    if(!queryParams.limit) {
+        queryParams.limit = 10
+    }
+    if(!queryParams.page) {
+        queryParams.page = 1
+    }
     const users = await User.getUsers(queryParams)
-    return res.status(200).json(users)
+    const numberUsers = await User.getUserCount()
+
+    return res.status(200).json({
+        users,
+        itemsCount: numberUsers,
+        nextPage: queryParams.page < Math.ceil(numberUsers / queryParams.limit) ? queryParams.page + 1 : null
+    })
     }
 
     catch (error) {
