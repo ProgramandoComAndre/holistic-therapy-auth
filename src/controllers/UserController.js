@@ -1,11 +1,12 @@
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-
+const sendMessage = require("../../sendMessage");
+const Role = require("../models/Role");
 require("dotenv").config();
 exports.register = async (req, res) => {
     try {
-    const { name, username, password, confirmPassword ,roleid } = req.body;
+    const { name, username, password, confirmPassword ,roleid, specialities } = req.body;
     if(!name) {
         return res.status(400).json({message: "Name is required"})
     }
@@ -25,8 +26,25 @@ exports.register = async (req, res) => {
     if(roleid <= 1) {
         return res.status(400).json({message: "Role is required"})
     }
+
+    if(roleid == 2) {
+        if(!req.body.specialities || req.body.specialities.length < 1) {
+            return res.status(400).json({message: "Specialities are required for new therapists"})
+        }
+    }
     const hashPassword = bcrypt.hashSync(password, 10);
     const user = await User.createUser(name, username,hashPassword, roleid)
+    if (roleid == 2) {
+        const message = {
+            type: 'therapist_created',
+            data: {
+                username: user.username,
+                name: user.name,
+                specialities: specialities
+            }
+        };
+        await sendMessage(message);
+    }
     return res.status(200).json(user);
 } catch (error) {
     console.log(error)
@@ -142,4 +160,17 @@ exports.listUsers = async (req, res) => {
         return res.status(500).json({message: "Internal Server Error"})
  
     }
+}
+
+exports.listRoles = async(req, res) => {
+    try {
+        const roles = await Role.getRoles()
+        return res.status(200).json(roles)
+        }
+    
+        catch (error) {
+            console.log(error)
+            return res.status(500).json({message: "Internal Server Error"})
+     
+        }
 }
