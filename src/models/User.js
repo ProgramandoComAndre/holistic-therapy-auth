@@ -1,4 +1,4 @@
-const pool = require('../../database')
+const getPool = require('../../database')
 class User {
     constructor(id, name, username, password, rolename, roleid, disabled) {
         this.id = id
@@ -12,6 +12,7 @@ class User {
 
     static async getUserCount() {
         const sql = 'SELECT COUNT(*) as "numberusers" FROM users'
+        const pool = getPool()
         const count = await pool.query(sql)
         if(count.rows.length > 0) {
             return count.rows[0].numberusers
@@ -31,6 +32,7 @@ class User {
     static async getUsers(queryParams) {
         let whereQuery = ""
         let limitQuery = ""
+        const pool = getPool()
         if(Object.keys(queryParams).length > 0){
             if(queryParams.username) {
                 whereQuery = `WHERE username LIKE '%${queryParams.username}%'`
@@ -72,6 +74,7 @@ class User {
 
 
     static async createUser(name, username, password, roleid) {
+        const pool = getPool()
         const sql = 'INSERT INTO users (name, username, password, roleid) VALUES ($1, $2, $3, $4) RETURNING *'
         const user = await pool.query(sql, [name, username, password, roleid])
         if(user.rows.length > 0) {
@@ -81,6 +84,7 @@ class User {
     }
 
     static async getByUsername(username) {
+        const pool = getPool()
         const sql = 'SELECT *, roles.description as "rolename" FROM users INNER JOIN roles ON users.roleid = roles.id WHERE username = $1'
         const user = await pool.query(sql, [username])
         if(user.rows.length > 0) {
@@ -90,6 +94,7 @@ class User {
     }
 
     static async disableUser(username) {
+        const pool = getPool()
         console.log(username)
         const sql = 'UPDATE users SET disabled = true WHERE username = $1 RETURNING *'
         
@@ -109,6 +114,7 @@ class User {
     }
 
     static async getDisabledUsers() {
+        const pool = getPool()
         const sql = 'SELECT * FROM users WHERE disabled = true'
         const users = await pool.query(sql)
         if(users.rows.length > 0) {
@@ -118,6 +124,7 @@ class User {
     }
 
     static async enableUser(username) {
+        const pool = getPool()
         const sql = 'UPDATE users SET disabled = false WHERE username = $1 RETURNING *'
         const user = await pool.query(sql, [username])
         if(user.rows.length > 0) {

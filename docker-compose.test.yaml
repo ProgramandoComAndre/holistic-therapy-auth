@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+
+  therapist_db:
+    image: postgres
+    ports:
+      - "5434:5432"
+    environment:
+      - POSTGRES_USER=therapists
+      - POSTGRES_PASSWORD=therapists
+      - POSTGRES_DB=therapists
+    volumes:
+      - ../holistic-therapy-therapists/migrations:/docker-entrypoint-initdb.d
+    depends_on:
+      - auth_db
+  auth_db:
+    image: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=auth
+      - POSTGRES_PASSWORD=auth
+      - POSTGRES_DB=auth
+    volumes:
+      - ./migrations:/docker-entrypoint-initdb.d
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    healthcheck:
+      test: ["CMD", "wget", "http://localhost:15672"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+  therapist:
+    build: ../holistic-therapy-therapists
+    ports:
+      - "3002:3002"
+    environment:
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - API_PORT=3002
+      - DATABASE_URL=postgres://therapists:therapists@therapist_db:5432/therapists
+      - JWT_SECRET=secret
+    depends_on:
+      - rabbitmq
+      - therapist_db
+    
